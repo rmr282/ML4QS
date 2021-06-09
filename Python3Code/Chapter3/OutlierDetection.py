@@ -92,13 +92,18 @@ class DistanceBasedOutlierDetection:
     def simple_distance_based(self, data_table, cols, d_function, dmin, fmin):
         print('Calculating simple distance-based criterion.')
 
+        print('Normalizing')
+
         # Normalize the dataset first.
         new_data_table = util.normalize_dataset(
             data_table.dropna(axis=0, subset=cols), cols)
 
+        print('Creating distance table')
+
         # Create the distance table first between all instances:
         self.distances = self.distance_table(new_data_table, cols, d_function)
 
+        print('Wrapping up')
         mask = []
         # Pass the rows in our table.
         for i in range(0, len(new_data_table.index)):
