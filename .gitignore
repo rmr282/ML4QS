@@ -133,7 +133,9 @@ dmypy.json
 .idea/
 
 *.pyc
-datasets
-PythonCode/intermediate_datafiles/
-PythonCode/Example_graphs/
+*/datasets/crowdsignals/*
+Python3Code/intermediate_datafiles/
+Python3Code/Example_graphs/
 *.png
+!Python3Code/datasets/MS4QS_sensor_data_day1.csv
+!Python3Code/datasets/MS4QS_sensor_labels_day1.csv
