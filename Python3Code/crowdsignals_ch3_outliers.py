@@ -84,10 +84,9 @@ def main():
     elif FLAGS.mode == 'distance':
         for col in outlier_columns:
             try:
-                dataset = OutlierDist.simple_distance_based(
-                    dataset, [col], 'euclidean', FLAGS.dmin, FLAGS.fmin)
-                DataViz.plot_binary_outliers(
-                    dataset, col, 'simple_dist_outlier')
+                dataset_outliers_dist = OutlierDist.simple_distance_based(
+                    copy.deepcopy(dataset), [col], 'euclidean', FLAGS.dmin, FLAGS.fmin)
+                DataViz.plot_binary_outliers(dataset_outliers_dist, col, 'simple_dist_outlier')
             except MemoryError as e:
                 print(
                     'Not enough memory available for simple distance-based outlier detection...')
@@ -96,9 +95,9 @@ def main():
     elif FLAGS.mode == 'LOF':
         for col in outlier_columns:
             try:
-                dataset = OutlierDist.local_outlier_factor(
-                    dataset, [col], 'euclidean', FLAGS.K)
-                DataViz.plot_dataset(dataset, [col, 'lof'], [
+                dataset_outliers_lof = OutlierDist.local_outlier_factor(copy.deepcopy(dataset),
+                                                                        [col], 'euclidean', FLAGS.K)
+                DataViz.plot_dataset(dataset_outliers_lof, [col, 'lof'], [
                                      'exact', 'exact'], ['line', 'points'])
             except MemoryError as e:
                 print('Not enough memory available for lof...')
