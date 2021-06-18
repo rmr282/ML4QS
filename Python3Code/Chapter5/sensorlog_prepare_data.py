@@ -10,7 +10,7 @@ from Chapter3.OutlierDetection import DistributionBasedOutlierDetection, Distanc
 from Chapter3.DataTransformation import LowPassFilter, PrincipalComponentAnalysis
 from Chapter4.TemporalAbstraction import NumericalAbstraction, CategoricalAbstraction
 from Chapter4.FrequencyAbstraction import FourierTransformation
-from Chapter5.Clustering import NonHierarchicalClustering, HierarchicalClustering
+from Chapter5.Clustering import NonHierarchicalClustering
 from util.VisualizeDataset import VisualizeDataset
 
 
@@ -27,7 +27,7 @@ def unnesting(df, explode, axis):
         else:
             return None
 
-FILENAME = 'sensorlog_readouts_transposed'
+FILENAME = 'sensorlog_readouts_transposed_d250(2)'
 RECREATE = False
 
 DataViz = VisualizeDataset(__file__ + '_sensorlog')
@@ -41,14 +41,13 @@ NumAbs = NumericalAbstraction()
 FreqAbs = FourierTransformation()
 CatAbs = CategoricalAbstraction()
 clusteringNH = NonHierarchicalClustering()
-clusteringH = HierarchicalClustering()
 
 labels = pd.read_csv('../datasets/MS4QS_sensor_labels_day1.csv', sep='|')
 
 u_labels = np.array([labels['label'].values[i] for i in sorted(np.unique(labels['label'], return_index=True)[1])])
 labels = {k: v for (k, v) in zip(*labels.to_dict('list').values())}
 
-delta = 150
+delta = 250
 delta_td = pd.Timedelta(milliseconds=delta)
 
 if RECREATE or not os.path.exists(FILENAME + '_raw.csv'):
@@ -89,6 +88,8 @@ if RECREATE or not os.path.exists(FILENAME + '_raw.csv'):
     data.to_csv(FILENAME + '_raw.csv')
 else:
     data = pd.read_csv(FILENAME + '_raw.csv')
+    if 'Unnamed: 0' in data.columns:
+        data.drop('Unnamed: 0', inplace=True, axis=1)
 
 selected_predictor_cols = [c for c in data.columns if not 'label' in c and c != 'timestamp']
 periodic_measurements = ['gravity_x', 'gravity_y', 'gravity_z',
@@ -108,6 +109,8 @@ if RECREATE or not os.path.exists(FILENAME + '_outlier.csv'):
     data.to_csv(FILENAME + '_outlier.csv')
 else:
     data = pd.read_csv(FILENAME + '_outlier.csv')
+    if 'Unnamed: 0' in data.columns:
+        data.drop('Unnamed: 0', inplace=True, axis=1)
 
 if RECREATE or not os.path.exists(FILENAME + '_lowpass.csv'):
     print("*Pruttel Pruttel* Doing Low Pass filtering")
@@ -127,13 +130,16 @@ if RECREATE or not os.path.exists(FILENAME + '_lowpass.csv'):
     n_pcs = np.argmax(PCA.determine_pc_explained_variance(data, selected_predictor_cols)) + 1
     data = PCA.apply_pca(copy.deepcopy(data), selected_predictor_cols, n_pcs)
 
-    data.to_csv(FILENAME + '_lowpass.csv', index=False)
+    data.to_csv(FILENAME + '_lowpass.csv')
 else:
     data = pd.read_csv(FILENAME + '_lowpass.csv')
+    if 'Unnamed: 0' in data.columns:
+        data.drop('Unnamed: 0', inplace=True, axis=1)
 
-if RECREATE or not os.path.exists(FILENAME + '_freq.csv') or True:
+if RECREATE or not os.path.exists(FILENAME + '_freq.csv'):
     print("*Prrrt Prrrt* Adding frequency features...")
-    data = data.set_index('timestamp', drop=False)
+    if 'timestamp' in data.columns:
+        data = data.set_index('timestamp', drop=True)
     data.index = pd.to_datetime(data.index)
 
     ws = int(float(0.5 * 60000) / delta)
@@ -149,10 +155,27 @@ if RECREATE or not os.path.exists(FILENAME + '_freq.csv') or True:
     data = FreqAbs.abstract_frequency(copy.deepcopy(data), periodic_measurements,
                                       int(float(10000) / 250), float(1000) / 250)
 
-    window_overlap = 0.9
-    skip_points = int((1-window_overlap) * ws)
-    data = data.iloc[::skip_points, :]
+    # window_overlap = 0.9
+    # skip_points = int((1-window_overlap) * ws)
+    # data = data.iloc[::skip_points, :]
 
-    data.to_csv(FILENAME + '_freq.csv', index=False)
+    data.to_csv(FILENAME + '_freq.csv')
 else:
     data = pd.read_csv(FILENAME + '_freq.csv')
+    if 'Unnamed: 0' in data.columns:
+        data.drop('Unnamed: 0', inplace=True, axis=1)
+
+if RECREATE or not os.path.exists(FILENAME + '_cluster.csv'):
+    print("*Homm Humm* Adding clustering features...")
+    clusteringNH = NonHierarchicalClustering()
+
+    k = 4
+    data = clusteringNH.k_means_over_instances(data, ['linear_acceleration_x', 'linear_acceleration_y',
+                                                      'linear_acceleration_z'], k, 'default', 50, 50)
+    del data['silhouette']
+
+    data.to_csv(FILENAME + '_cluster.csv')
+else:
+    data = pd.read_csv(FILENAME + '_cluster.csv')
+    if 'Unnamed: 0' in data.columns:
+        data.drop('Unnamed: 0', inplace=True, axis=1)

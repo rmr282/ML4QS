@@ -1,6 +1,7 @@
 import pandas as pd
 import time
 from pathlib import Path
+from sklearn.model_selection import train_test_split
 
 from Chapter7.PrepareDatasetForLearning import PrepareDatasetForLearning
 from Chapter7.LearningAlgorithms import ClassificationAlgorithms
@@ -17,28 +18,29 @@ EXPORT_TREE_PATH = Path('./figures/sensorlog_classification/')
 # Next, we declare the parameters we'll use in the algorithms.
 N_FORWARD_SELECTION = 50
 
-dataset = pd.read_csv('../Chapter5/sensorlog_readouts_transposed_freq.csv')
+dataset = pd.read_csv('../Chapter5/sensorlog_readouts_transposed_d250(2)_cluster.csv')
 dataset.set_index('timestamp', inplace=True, drop=True)
+dataset.index = pd.to_datetime(dataset.index)
 
 print(f"Calculating correlations between features and label...")
-selected_predictor_cols = [c for c in dataset.columns if not 'label' in c or c == 'labelId']
+selected_predictor_cols = [c for c in dataset.columns if not 'label' in c or c == 'label_id']
 
-pearson_corr = dataset[selected_predictor_cols].corr('pearson')['labelId'][:]
-spearman_corr = dataset[selected_predictor_cols].corr('spearman')['labelId'][:]
+pearson_corr = dataset[selected_predictor_cols].corr('pearson')['label_id'][:]
+spearman_corr = dataset[selected_predictor_cols].corr('spearman')['label_id'][:]
 corrs = pd.concat([pearson_corr, spearman_corr], keys=['Pearson', 'Spearman'], axis=1).sort_values(['Pearson', 'Spearman'], ascending=False)
 
 print("Name,Pearson,Spearman")
 for corr in corrs.iterrows():
     print(f"{corr[0]},{corr[1].Pearson},{corr[1].Spearman}")
 
-selected_features = corrs[(corrs.index != 'labelId') & (corrs['Pearson'] >= 0.1) | (corrs['Pearson'] < 0.1)].index.to_list()
-dataset.drop('label', inplace=True, axis=1)
+selected_features = corrs[(corrs.index != 'label_id') & (corrs['Pearson'] >= 0.1) | (corrs['Pearson'] < 0.1)].index.to_list()
+dataset_labels = dataset.label_id
+dataset = dataset[[c for c in dataset.columns if 'label' not in c]].fillna(0)
 
 DataViz = VisualizeDataset(__file__)
 prepare = PrepareDatasetForLearning()
 
-train_X, test_X, train_y, test_y = prepare.split_single_dataset_classification(
-    dataset, ['label'], 'like', 0.7, filter=True, temporal=False)
+train_X, test_X, train_y, test_y = train_test_split(dataset, dataset_labels, test_size=.7)
 
 print('Training set length is: ', len(train_X.index))
 print('Test set length is: ', len(test_X.index))
@@ -54,24 +56,23 @@ pca_features = ['pca_1']
 
 time_features = [name for name in dataset.columns if '_temp_' in name]
 freq_features = [name for name in dataset.columns if (('_freq' in name) or ('_pse' in name))]
+cluster_features = ['cluster']
 
 print('#basic features: ', len(basic_features))
 print('#PCA features: ', len(pca_features))
 print('#time features: ', len(time_features))
 print('#frequency features: ', len(freq_features))
-
-cluster_features = ['cluster']
-
 print('#cluster features: ', len(cluster_features))
 
 features_after_chapter_3 = list(set().union(basic_features, pca_features))
 features_after_chapter_4 = list(set().union(basic_features, pca_features, time_features, freq_features))
+features_after_chapter_5 = list(set().union(basic_features, pca_features, time_features, freq_features, cluster_features))
 
 fs = FeatureSelectionClassification()
 
 features, ordered_features, ordered_scores = fs.forward_selection(N_FORWARD_SELECTION,
-                                                                  train_X[features_after_chapter_4], train_y,
-                                                                  test_X[features_after_chapter_4], test_y,
+                                                                  train_X[features_after_chapter_5], train_y,
+                                                                  test_X[features_after_chapter_5], test_y,
                                                                   gridsearch=False)
 
 DataViz.plot_xy(x=[range(1, N_FORWARD_SELECTION + 1)], y=[ordered_scores],
@@ -101,6 +102,7 @@ for reg_param in reg_parameters:
         performance_te += eval.accuracy(test_y, class_test_y)
     performance_training.append(performance_tr / N_REPEATS_NN)
     performance_test.append(performance_te / N_REPEATS_NN)
+
 DataViz.plot_xy(x=[reg_parameters, reg_parameters], y=[performance_training, performance_test], method='semilogx',
                 xlabel='regularization parameter value', ylabel='accuracy', ylim=[0.95, 1.01],
                 names=['training', 'test'], line_styles=['r-', 'b:'])
@@ -127,7 +129,8 @@ DataViz.plot_xy(x=[leaf_settings, leaf_settings], y=[performance_training, perfo
 # So yes, it is important :) Therefore we perform grid searches over the most important parameters, and do so by means
 # of cross validation upon the training set.
 
-possible_feature_sets = [basic_features, features_after_chapter_3, features_after_chapter_4, selected_features]
+possible_feature_sets = [basic_features, features_after_chapter_3, features_after_chapter_4,
+                         features_after_chapter_5, selected_features]
 feature_names = ['initial set', 'Chapter 3', 'Chapter 4', 'Chapter 5', 'Selected features']
 N_KCV_REPEATS = 5
 

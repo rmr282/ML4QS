@@ -25,7 +25,7 @@ except IOError as e:
 cmap = cm.get_cmap('tab10')
 plt.figure(figsize=(6, 4))
 plt.xlabel('k')
-plt.ylabel('silhoutte score')
+plt.ylabel('silhouette score')
 plt.ylim((0, 1))
 
 clusteringNH = NonHierarchicalClustering()
@@ -68,7 +68,7 @@ for k in k_values:
     print(f'silhouette = {silhouette_score}')
     silhouette_values.append(silhouette_score)
 
-plt.plot(k_values, silhouette_values, color=cmap.colors[1], label='acc. kmeans')
+plt.plot(k_values, silhouette_values, color=cmap.colors[1], label='acc. k medoids')
 
 print('===== k medoids clustering =====')
 silhouette_values = []
@@ -80,7 +80,7 @@ for k in k_values:
     print(f'silhouette = {silhouette_score}')
     silhouette_values.append(silhouette_score)
 
-plt.plot(k_values, silhouette_values, color=cmap.colors[1], label='gyro kmeans', linestyle='dashed')
+plt.plot(k_values, silhouette_values, color=cmap.colors[1], label='gyro k medoids', linestyle='dashed')
 
 print('===== agglomerative clustering =====')
 silhouette_values = []

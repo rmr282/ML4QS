@@ -9,6 +9,7 @@
 
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 # This class performs a Fourier transformation on the data to find frequencies that occur
 # often and filter noise.
@@ -57,7 +58,7 @@ class FourierTransformation:
     def abstract_frequency(self, data_table, columns, window_size, sampling_rate):
         self.freqs = (sampling_rate * np.fft.rfftfreq(int(window_size))).round(3)
 
-        for col in columns:
+        for col in tqdm(columns, desc="*Kraak Piep* Creating frequency columns..."):
             collist = []
             # prepare column names
             collist.append(col + '_max_freq')
